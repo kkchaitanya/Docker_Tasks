@@ -1,0 +1,92 @@
+In this practical, we will create two Ubuntu containers, connect them to a custom Docker network, and demonstrate that one container can communicate with the other using its container name.
+
+Step 1: Create a custom Docker network
+bash
+docker network create super30-network
+Verify that the network exists:
+
+bash
+docker network ls
+Expected output includes:
+
+text
+NETWORK ID     NAME              DRIVER
+xxxxxxxxxxxx   super30-network   bridge
+Step 2: Create the first container
+Run an Ubuntu container named container1 on the custom network. It will act as the server.
+
+bash
+docker run -dit \
+  --name container1 \
+  --network super30-network \
+  ubuntu:latest bash
+Install netcat so the container can listen for connections:
+
+bash
+docker exec container1 bash -c \
+  "apt-get update && apt-get install -y netcat-openbsd"
+Start a simple TCP server on port 9000:
+
+bash
+docker exec -d container1 bash -c \
+  "while true; do echo 'Hello from container1' | nc -l -p 9000; done"
+Step 3: Create the second container
+Run another Ubuntu container named container2 on the same network:
+
+bash
+docker run -dit \
+  --name container2 \
+  --network super30-network \
+  ubuntu:latest bash
+Install the networking utility:
+
+bash
+docker exec container2 bash -c \
+  "apt-get update && apt-get install -y netcat-openbsd"
+Step 4: Demonstrate communication between containers
+From container2, connect to container1 using its container name:
+
+bash
+docker exec container2 nc -w 3 container1 9000
+Expected output:
+
+text
+Hello from container1
+Success! Container 2 communicated with Container 1 over the custom Docker network.
+
+Step 5: Verify network membership
+Inspect the network:
+
+bash
+docker network inspect super30-network
+Under the Containers section, you should see both container1 and container2.
+
+You can also verify that Docker's embedded DNS resolves the other container's name:
+
+bash
+docker exec container2 getent hosts container1
+This should return the IP address assigned to container1.
+
+How it works
+Container 1 — Server
+
+Listens on TCP port 9000
+
+super30-network
+
+Bridge network with container-name DNS resolution
+
+TCP communication
+
+Container 2 — Client
+
+Connects to container1:9000
+
+Containers attached to the same user-defined bridge network can communicate with each other using container names. You do not need to hard-code container IP addresses.
+
+Step 6: Clean up
+After completing the practical, remove both containers and the network:
+
+bash
+docker rm -f container1 container2
+docker network rm super30-network

@@ -1,0 +1,29 @@
+Run PostgreSQL as a standalone container:
+------------------------------------------
+
+docker run -d \
+  --name super30-postgres \
+  -e POSTGRES_DB=super30db \
+  -e POSTGRES_USER=super30user \
+  -e POSTGRES_PASSWORD=local_dev_password \
+  -p 5432:5432 \
+  postgres:16
+
+
+  Verify that the container is running:
+
+bash
+docker ps
+docker logs super30-postgres
+Check that PostgreSQL is ready to accept connections:
+
+bash
+docker exec super30-postgres \
+  pg_isready -U super30user -d super30db
+Expected result:
+
+text
+/var/run/postgresql:5432 - accepting connections
+The environment variables configure the initial database when PostgreSQL initializes an empty data directory. Changing these variables later does not automatically change the credentials or database in an already initialized data directory.
+
+For this local lab, the example password is a placeholder. Use a strong, privately managed password for real deployments.

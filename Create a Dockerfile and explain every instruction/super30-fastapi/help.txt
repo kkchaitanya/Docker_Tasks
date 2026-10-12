@@ -1,0 +1,32 @@
+docker build -t super30-api 
+---------------------------------------------------
+docker run -d \
+  --name super30-env-container \
+  -p 8000:8000 \
+  -e APP_NAME="Super30 Production API" \
+  -e APP_ENV="production" \
+  super30-api
+---------------------------------------------------------
+
+You can also inspect the container's configured environment:
+---------------------------------------------------------------
+
+bash
+docker exec super30-env-container printenv APP_NAME
+docker exec super30-env-container printenv APP_ENV
+
+---------------------------------------------------------------
+
+
+docker build -t super30-api .
+docker run -d \
+  --name super30-envfile-container \
+  --env-file .env \
+  -p 8000:8000 \
+  super30-api
+
+
+docker exec super30-envfile-container printenv APP_NAME
+docker exec super30-envfile-container printenv APP_ENV
+
+

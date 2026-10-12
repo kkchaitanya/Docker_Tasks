@@ -1,0 +1,85 @@
+data persists after container removal
+A Docker volume stores data independently of a container's writable filesystem. This means you can remove one container and create another container that accesses the same data.
+
+Container 1
+
+Creates and stores a file
+
+Named Docker volume: super30-data
+
+Persistent file storage
+
+Container 2
+
+Reads the same file from the volume
+
+Step 1: Create a named volume
+bash
+docker volume create super30-data
+Verify it exists:
+
+bash
+docker volume ls
+docker volume inspect super30-data
+Step 2: Create the first container and store data
+Run an Ubuntu container with the volume mounted at /data:
+
+bash
+docker run -it \
+  --name super30-volume-one \
+  --mount source=super30-data,target=/data \
+  ubuntu:latest bash
+Inside the container, create a file:
+
+bash
+echo "Docker volume data persists!" > /data/message.txt
+echo "Created by the first container." >> /data/message.txt
+Display the file:
+
+bash
+cat /data/message.txt
+Expected output:
+
+text
+Docker volume data persists!
+Created by the first container.
+Exit the container:
+
+bash
+exit
+Step 3: Remove the first container
+bash
+docker rm super30-volume-one
+Confirm the container has been removed:
+
+bash
+docker ps -a
+The named volume is not removed when you remove the container.
+
+Step 4: Create another container using the same volume
+Start a new Ubuntu container and mount super30-data at /data again:
+
+bash
+docker run --rm \
+  --name super30-volume-two \
+  --mount source=super30-data,target=/data \
+  ubuntu:latest \
+  cat /data/message.txt
+Expected output:
+
+text
+Docker volume data persists!
+Created by the first container.
+This proves that the data survived the removal of the first container. The second container reads the file from the same named volume, rather than from the first container's filesystem.
+
+Step 5: Verify the volume still exists
+bash
+docker volume ls
+docker volume inspect super30-data
+The volume should still be listed.
+
+When you no longer need the lab data, remove the volume explicitly:
+
+bash
+docker volume rm super30-data
+Only do this after you have finished using the data. Removing the volume deletes its stored data.

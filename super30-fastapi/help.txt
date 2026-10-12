@@ -1,0 +1,16 @@
+ Build the Docker image
+---------------------------------
+docker build -t super30-api .
+
+9. Run FastAPI on port 8000 and access it from your browser
+-----------------------------------------------------------
+
+docker run -d --name super30-api-container -p 8000:8000 super30-api
+
+10. Run the same image using host port 5000
+-----------------------------------------------
+
+docker stop super30-api-container
+docker rm super30-api-container
+
+docker run -d --name super30-api-5000 -p 5000:8000 super30-api

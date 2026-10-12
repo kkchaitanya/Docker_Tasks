@@ -1,0 +1,142 @@
+1. Pull Ubuntu and execute at least five Linux commands
+Pull the latest Ubuntu image and start an interactive container:
+
+bash
+docker pull ubuntu:latest
+docker run -it --name ubuntu-lab ubuntu:latest bash
+Inside the container, execute these Linux commands:
+
+bash
+# 1. Display the current directory
+pwd
+
+# 2. List files, including hidden files
+ls -la
+
+# 3. Display the current user
+whoami
+
+# 4. Display operating system information
+cat /etc/os-release
+
+# 5. Display the current date and time
+date
+
+# 6. Display disk usage
+df -h
+
+# 7. Display memory information, if available
+cat /proc/meminfo | head
+Exit the container:
+
+bash
+exit
+
+-----------------------------------------
+-----------------------------------------
+2. Install Python inside an Ubuntu container and execute a program
+Start an Ubuntu container with an interactive terminal:
+
+bash
+docker run -it --name ubuntu-python ubuntu:latest bash
+Inside the container, install Python:
+
+bash
+apt-get update
+apt-get install -y python3
+Check the Python version:
+
+bash
+python3 --version
+Execute a simple Python program:
+
+bash
+python3 -c "print('Hello from Python inside Ubuntu Docker!')"
+Expected output:
+
+text
+Hello from Python inside Ubuntu Docker!
+Exit the container:
+
+bash
+exit
+-----------------------------------------------
+-----------------------------------------------
+3. Run Ubuntu with a custom container name
+Create and run a container named super30-linux:
+
+bash
+docker run -it --name super30-linux ubuntu:latest bash
+Inside the container, run:
+
+bash
+echo "Welcome to Super30 Linux Lab"
+whoami
+pwd
+exit
+Verify the container name:
+
+bash
+docker ps -a
+Expected result: the container list includes super30-linux. It will normally show as Exited after you run exit.
+
+To start the same container again:
+
+bash
+docker start -ai super30-linux
+---------------------------------------------------------
+---------------------------------------------------------
+4. Run a detached container, stop, restart, and remove it
+Run Ubuntu in detached mode with a process that stays alive:
+
+bash
+docker run -d --name super30-detached ubuntu:latest sleep infinity
+Verify that it is running:
+
+bash
+docker ps
+Stop the container:
+
+bash
+docker stop super30-detached
+Verify its stopped status:
+
+bash
+docker ps -a
+Restart the container:
+
+bash
+docker start super30-detached
+docker ps
+Finally, stop and remove it:
+
+bash
+docker stop super30-detached
+docker rm super30-detached
+Verify removal:
+
+bash
+docker ps -a
+
+-----------------------------------------------------------
+-----------------------------------------------------------
+
+5. Pull three Docker images and display local images
+Pull three different images from Docker Hub:
+
+bash
+docker pull ubuntu:latest
+docker pull nginx:latest
+docker pull python:3.13-slim
+List all locally available images:
+
+bash
+docker images
+Alternatively:
+
+bash
+docker image ls
+
+---------------------------------------------------------------
+---------------------------------------------------------------
+
