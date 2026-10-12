@@ -1,0 +1,246 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Super30 | Item Manager</title>
+  <style>
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f1f5f9;
+      color: #172033;
+    }
+
+    header {
+      background: #172554;
+      color: white;
+      padding: 22px 8%;
+    }
+
+    header h1 { margin: 0 0 6px; }
+    header p { margin: 0; color: #cbd5e1; }
+
+    main {
+      max-width: 900px;
+      margin: 35px auto;
+      padding: 0 20px;
+    }
+
+    .status, .panel {
+      background: white;
+      border-radius: 12px;
+      padding: 22px;
+      margin-bottom: 20px;
+      box-shadow: 0 3px 12px #0f172a0d;
+    }
+
+    .status {
+      display: flex;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .ok { color: #15803d; }
+    .bad { color: #dc2626; }
+
+    form {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    input {
+      flex: 1;
+      min-width: 180px;
+      padding: 12px;
+      border: 1px solid #cbd5e1;
+      border-radius: 7px;
+      font-size: 16px;
+    }
+
+    button {
+      background: #2563eb;
+      color: white;
+      border: 0;
+      border-radius: 7px;
+      padding: 12px 18px;
+      cursor: pointer;
+      font-size: 15px;
+    }
+
+    button:hover { background: #1d4ed8; }
+
+    #message { margin-top: 12px; }
+
+    .item {
+      display: flex;
+      justify-content: space-between;
+      padding: 14px 0;
+      border-bottom: 1px solid #e2e8f0;
+      gap: 12px;
+    }
+
+    .item:last-child { border-bottom: 0; }
+
+    .item-id { color: #64748b; }
+
+    footer {
+      text-align: center;
+      color: #64748b;
+      padding: 20px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Super30 Item Manager</h1>
+    <p>Frontend · FastAPI · PostgreSQL</p>
+  </header>
+
+  <main>
+    <section class="status">
+      <div>
+        <strong>Backend:</strong>
+        <span id="backendStatus">Checking...</span>
+      </div>
+      <div>
+        <strong>Database:</strong>
+        <span id="dbStatus">Checking...</span>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>Add a new item</h2>
+      <form id="itemForm">
+        <input
+          id="itemName"
+          type="text"
+          placeholder="Enter item name"
+          maxlength="200"
+          required
+        >
+        <button type="submit">Add item</button>
+      </form>
+      <p id="message" role="status"></p>
+    </section>
+
+    <section class="panel">
+      <h2>Saved items</h2>
+      <button id="refreshButton" type="button">
+        Refresh list
+      </button>
+      <div id="itemsList">Loading items...</div>
+    </section>
+  </main>
+
+  <footer>Super30 Database API · Docker Compose</footer>
+
+  <script>
+    const api = "/api";
+
+    async function request(path, options = {}) {
+      const response = await fetch(api + path, options);
+      if (!response.ok) {
+        throw new Error("Request failed: HTTP " + response.status);
+      }
+      return response.json();
+    }
+
+    async function checkHealth() {
+      const backend = document.getElementById("backendStatus");
+      const database = document.getElementById("dbStatus");
+
+      try {
+        const health = await request("/health");
+        backend.textContent = "Online";
+        backend.className = "ok";
+
+        database.textContent =
+          health.database === "connected" ? "Connected" : "Unavailable";
+        database.className =
+          health.database === "connected" ? "ok" : "bad";
+      } catch {
+        backend.textContent = "Unavailable";
+        backend.className = "bad";
+        database.textContent = "Unavailable";
+        database.className = "bad";
+      }
+    }
+
+    async function loadItems() {
+      const list = document.getElementById("itemsList");
+      list.textContent = "Loading items...";
+
+      try {
+        const items = await request("/items");
+        list.replaceChildren();
+
+        if (!items.length) {
+          list.textContent = "No items yet. Add your first item!";
+          return;
+        }
+
+        items.forEach(item => {
+          const row = document.createElement("div");
+          row.className = "item";
+
+          const name = document.createElement("strong");
+          name.textContent = item.name;
+
+          const id = document.createElement("span");
+          id.className = "item-id";
+          id.textContent = "#" + item.id;
+
+          row.append(name, id);
+          list.appendChild(row);
+        });
+      } catch {
+        list.textContent =
+          "Could not load items. Check whether the backend is running.";
+      }
+    }
+
+    document.getElementById("itemForm").addEventListener(
+      "submit",
+      async event => {
+        event.preventDefault();
+
+        const input = document.getElementById("itemName");
+        const message = document.getElementById("message");
+        const name = input.value.trim();
+
+        if (!name) {
+          message.textContent = "Please enter an item name.";
+          return;
+        }
+
+        message.textContent = "Saving...";
+
+        try {
+          await request("/items/" + encodeURIComponent(name), {
+            method: "POST"
+          });
+
+          message.textContent = "Item saved successfully!";
+          input.value = "";
+          await loadItems();
+        } catch {
+          message.textContent =
+            "Could not save item. Check the backend and database.";
+        }
+      }
+    );
+
+    document.getElementById("refreshButton")
+      .addEventListener("click", loadItems);
+
+    checkHealth();
+    loadItems();
+  </script>
+</body>
+</html>
