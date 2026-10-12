@@ -1,7 +1,11 @@
 import os 
 import psycopg 
-from fastapi import FastAPI 
+from fastapi import FastAPI,HTTPException
 from psycopg.rows import dict_row
+from pydantic import BaseModel
+
+class ItemCreate(BaseModel):
+    name: str
 
 app = FastAPI(title="Super30 Database API")
 
@@ -25,7 +29,7 @@ def health():
                 return {"status": "healthy", "database": "connected"} 
         except Exception: return {"status": "unhealthy", "database": "unavailable"}
 
-@app.post("/items/{name}") 
+@app.post("/items") 
 def createitem(name: str): 
     with getconnection() as conn: row = conn.execute( "INSERT INTO items (name) VALUES (%s) RETURNING id, name", (name,) ).fetchone() 
     return row
@@ -34,3 +38,65 @@ def createitem(name: str):
 def listitems(): 
     with getconnection() as conn: rows = conn.execute( "SELECT id, name FROM items ORDER BY id" ).fetchall() 
     return rows
+
+@app.get("/items/{item_id}")
+def get_item(item_id: int):
+    with getconnection() as conn:
+        row = conn.execute(
+            "SELECT id, name FROM items WHERE id = %s",
+            (item_id,)
+        ).fetchone()
+
+    if row is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Item not found"
+        )
+
+    return row
+
+
+@app.put("/items/{item_id}")
+def update_item(item_id: int, item: ItemCreate):
+    with getconnection() as conn:
+        row = conn.execute(
+            """
+            UPDATE items
+            SET name = %s
+            WHERE id = %s
+            RETURNING id, name
+            """,
+            (item.name, item_id)
+        ).fetchone()
+
+    if row is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Item not found"
+        )
+
+    return row
+
+
+@app.delete("/items/{item_id}")
+def delete_item(item_id: int):
+    with getconnection() as conn:
+        row = conn.execute(
+            """
+            DELETE FROM items
+            WHERE id = %s
+            RETURNING id, name
+            """,
+            (item_id,)
+        ).fetchone()
+
+    if row is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Item not found"
+        )
+
+    return {
+        "message": "Item deleted successfully",
+        "item": row
+    }
