@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Student Management</title>
+<style>
+:root{font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,sans-serif;color:#172033;background:#f4f7fb}
+*{box-sizing:border-box}body{margin:0}.hero{background:linear-gradient(120deg,#182b55,#315fba);color:white;padding:34px max(22px,calc((100% - 1120px)/2))}
+.hero h1{margin:0 0 8px;font-size:clamp(26px,4vw,38px)}.hero p{margin:0;color:#dbe7ff}
+main{max-width:1120px;margin:28px auto;padding:0 20px}.layout{display:grid;grid-template-columns:330px 1fr;gap:22px;align-items:start}
+.panel{background:#fff;border:1px solid #e3e9f2;border-radius:16px;padding:22px;box-shadow:0 8px 25px #263c5c0a}
+h2{font-size:18px;margin:0 0 18px}.field{margin-bottom:14px}label{display:block;font-size:13px;font-weight:700;margin-bottom:6px;color:#46536a}
+input{width:100%;border:1px solid #d6deea;border-radius:9px;padding:11px 12px;font:inherit;outline:none}input:focus{border-color:#3867c8;box-shadow:0 0 0 3px #3867c81c}
+.actions{display:flex;gap:8px;flex-wrap:wrap}button{border:0;border-radius:9px;padding:10px 14px;font:inherit;font-weight:700;cursor:pointer}
+.primary{background:#315fba;color:white}.secondary{background:#edf2fa;color:#253653}.danger{background:#fff0f0;color:#b42318}.small{padding:7px 10px;font-size:12px}
+.status{min-height:22px;font-size:13px;color:#52627a;margin:12px 0 0}.status.error{color:#b42318}.toolbar{display:flex;gap:12px;justify-content:space-between;align-items:center;margin-bottom:14px}.toolbar h2{margin:0}
+.search{max-width:260px}.table-wrap{overflow-x:auto}table{width:100%;border-collapse:collapse;white-space:nowrap}th,td{text-align:left;padding:13px 10px;border-bottom:1px solid #edf0f5;font-size:13px}th{color:#69758a;font-size:11px;text-transform:uppercase;letter-spacing:.06em}tbody tr:last-child td{border-bottom:0}.name{font-weight:700;color:#202c43}.email{color:#65738a}.pill{display:inline-block;background:#edf4ff;color:#2e58a3;padding:5px 8px;border-radius:20px;font-size:11px;font-weight:700}.empty{text-align:center;color:#758198;padding:35px 10px}
+@media(max-width:850px){.layout{grid-template-columns:1fr}.hero{padding-top:26px;padding-bottom:26px}}@media(max-width:520px){main{padding:0 12px;margin:16px auto}.panel{padding:16px}.toolbar{align-items:stretch;flex-direction:column}.search{max-width:none}}
+</style>
+</head>
+<body>
+<header class="hero">
+  <h1>Student Management</h1>
+  <p>Manage student records in one simple dashboard.</p>
+</header>
+<main>
+<div class="layout">
+<section class="panel">
+  <h2 id="form-title">Add a student</h2>
+  <form id="student-form">
+    <div class="field"><label for="name">Full name</label><input id="name" name="name" placeholder="e.g. Ananya Rao" required maxlength="120"></div>
+    <div class="field"><label for="email">Email address</label><input id="email" name="email" type="email" placeholder="student@example.com" required maxlength="255"></div>
+    <div class="field"><label for="course">Course</label><input id="course" name="course" placeholder="e.g. Computer Science" required maxlength="120"></div>
+    <div class="field"><label for="age">Age</label><input id="age" name="age" type="number" min="1" max="120" placeholder="e.g. 21" required></div>
+    <div class="actions"><button class="primary" id="submit-btn" type="submit">Add student</button><button class="secondary" id="cancel-btn" type="button" hidden>Cancel</button></div>
+    <p class="status" id="form-status" role="status"></p>
+  </form>
+</section>
+<section class="panel">
+  <div class="toolbar"><h2>Student directory <span id="count" class="pill">0 students</span></h2><input class="search" id="search" placeholder="Search students…" aria-label="Search students"></div>
+  <div class="table-wrap"><table><thead><tr><th>Student</th><th>Course</th><th>Age</th><th>Actions</th></tr></thead><tbody id="students-body"></tbody></table></div>
+  <div id="empty" class="empty">Loading student records…</div>
+  <p class="status" id="list-status" role="status"></p>
+</section>
+</div>
+</main>
+<script>
+const form = document.querySelector("#student-form");
+const body = document.querySelector("#students-body");
+const empty = document.querySelector("#empty");
+const statusBox = document.querySelector("#form-status");
+const listStatus = document.querySelector("#list-status");
+const search = document.querySelector("#search");
+let students = [];
+let editingId = null;
+
+async function request(url, options = {}) {
+  const response = await fetch(url, {
+    ...options,
+    headers: {"Content-Type":"application/json", ...(options.headers || {})}
+  });
+  if (!response.ok) {
+    let message = `Request failed (${response.status})`;
+    try { const data = await response.json(); message = data.detail || message; } catch {}
+    throw new Error(message);
+  }
+  if (response.status === 204) return null;
+  return response.json();
+}
+function escapeHtml(value) {
+  return String(value).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+function render() {
+  const term = search.value.trim().toLowerCase();
+  const filtered = students.filter(s => [s.name,s.email,s.course,String(s.age)].some(v => v.toLowerCase().includes(term)));
+  body.innerHTML = filtered.map(s => `<tr>
+    <td><div class="name">${escapeHtml(s.name)}</div><div class="email">${escapeHtml(s.email)}</div></td>
+    <td><span class="pill">${escapeHtml(s.course)}</span></td><td>${s.age}</td>
+    <td><div class="actions"><button class="secondary small" data-edit="${s.id}">Edit</button><button class="danger small" data-delete="${s.id}">Delete</button></div></td>
+  </tr>`).join("");
+  document.querySelector("#count").textContent = `${students.length} student${students.length===1?"":"s"}`;
+  empty.hidden = filtered.length > 0;
+  empty.textContent = students.length && !filtered.length ? "No matching students found." : "No students yet. Add your first student using the form.";
+}
+async function loadStudents() {
+  try { students = await request("/api/students"); render(); listStatus.textContent = ""; }
+  catch (e) { listStatus.textContent = `Could not load records: ${e.message}. Check that the containers are healthy.`; }
+}
+function resetForm() {
+  editingId = null; form.reset();
+  document.querySelector("#form-title").textContent = "Add a student";
+  document.querySelector("#submit-btn").textContent = "Add student";
+  document.querySelector("#cancel-btn").hidden = true;
+  statusBox.textContent = ""; statusBox.classList.remove("error");
+}
+form.addEventListener("submit", async e => {
+  e.preventDefault();
+  const payload = Object.fromEntries(new FormData(form));
+  payload.age = Number(payload.age);
+  const id = editingId;
+  try {
+    await request(id ? `/api/students/${id}` : "/api/students", {
+      method: id ? "PUT" : "POST", body: JSON.stringify(payload)
+    });
+    resetForm();
+    statusBox.textContent = id ? "Student updated successfully." : "Student added successfully.";
+    await loadStudents();
+  } catch (err) { statusBox.textContent = err.message; statusBox.classList.add("error"); }
+});
+body.addEventListener("click", async e => {
+  const editButton = e.target.closest("[data-edit]");
+  const deleteButton = e.target.closest("[data-delete]");
+  if (editButton) {
+    const student = students.find(s => s.id === Number(editButton.dataset.edit));
+    if (!student) return;
+    editingId = student.id;
+    for (const key of ["name","email","course","age"]) form.elements[key].value = student[key];
+    document.querySelector("#form-title").textContent = "Edit student";
+    document.querySelector("#submit-btn").textContent = "Save changes";
+    document.querySelector("#cancel-btn").hidden = false;
+    statusBox.textContent = "";
+    window.scrollTo({top:0,behavior:"smooth"});
+  }
+  if (deleteButton) {
+    const student = students.find(s => s.id === Number(deleteButton.dataset.delete));
+    if (!student || !confirm(`Delete ${student.name}? This cannot be undone.`)) return;
+    try { await request(`/api/students/${student.id}`, {method:"DELETE"}); if(editingId===student.id) resetForm(); await loadStudents(); }
+    catch (err) { listStatus.textContent = err.message; }
+  }
+});
+document.querySelector("#cancel-btn").addEventListener("click", resetForm);
+search.addEventListener("input", render);
+loadStudents();
+</script>
+</body>
+</html>
