@@ -9,11 +9,18 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
 
-DATABASE_URL = os.environ["DATABASE_URL"]
+# DATABASE_URL = os.environ["DATABASE_URL"]
 
 
 def connect():
-    return psycopg.connect(DATABASE_URL, row_factory=dict_row, connect_timeout=5)
+    # return psycopg.connect(DATABASE_URL, row_factory=dict_row, connect_timeout=5)
+    # def getconnection(): 
+    return psycopg.connect( host=os.getenv("DB_HOST", "db"), 
+                           port=int(os.getenv("DB_PORT", "5432")), 
+                           dbname=os.getenv("POSTGRES_DB", "students_db"), 
+                           user=os.getenv("POSTGRES_USER", "student_admin"), 
+                           password=os.environ["POSTGRES_PASSWORD"],
+                               row_factory=dict_row, )
 
 
 def initialize_database():
